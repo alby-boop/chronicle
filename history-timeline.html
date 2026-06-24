@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chronicle</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #12121e;
+  --surface: #1a1a2e;
+  --surface2: #0e1a35;
+  --card: #1c2440;
+  --card-hover: #222d4f;
+  --text: #e8e8f0;
+  --text-muted: #7a8499;
+  --gold: #FF6B00;
+  --gold-light: #FF8C2A;
+  --green: #3dba6f;
+  --yellow: #FF8C00;
+  --red: #e04a4a;
+  --border: #252f4a;
+  --border-light: #2e3a5c;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Georgia', 'Times New Roman', serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 40px;
+}
+
+/* ── Header ── */
+.header {
+  width: 100%;
+  max-width: 580px;
+  margin-bottom: 20px;
+}
+
+.game-title {
+  font-size: 36px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.day-label {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  font-family: 'Arial', sans-serif;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.meta-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.tries-left {
+  font-family: 'Arial', sans-serif;
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.4px;
+}
+
+.tries-left .tries-num {
+  color: var(--gold);
+  font-weight: bold;
+  font-size: 15px;
+}
+
+.hint-btn {
+  background: transparent;
+  border: 1px solid var(--border-light);
+  color: var(--text-muted);
+  padding: 6px 13px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: 'Arial', sans-serif;
+  font-size: 13px;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+.hint-btn:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+.hint-btn:disabled { opacity: 0.35; cursor: default; }
+
+/* ── Instruction ── */
+.instruction {
+  width: 100%;
+  max-width: 580px;
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  letter-spacing: 0.3px;
+}
+
+/* ── Timeline ── */
+.timeline {
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.card {
+  display: flex;
+  align-items: stretch;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: var(--card);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: border-color 0.25s, box-shadow 0.25s, transform 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+
+.card:active { cursor: grabbing; }
+.card.dragging { opacity: 0.35; }
+.card.drag-over {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+  transform: scale(1.012);
+}
+
+/* Left color stripe */
+.card-stripe {
+  width: 5px;
+  min-width: 5px;
+  background: transparent;
+  transition: background 0.35s;
+  border-radius: 0;
+}
+.card.correct .card-stripe { background: var(--green); }
+.card.close   .card-stripe { background: var(--yellow); }
+.card.wrong   .card-stripe { background: var(--red); }
+.card.correct { border-color: var(--green); }
+.card.close   { border-color: var(--yellow); }
+.card.wrong   { border-color: var(--red); }
+
+/* Slot number */
+.card-num {
+  width: 50px;
+  min-width: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface2);
+  padding: 10px 0;
+  gap: 3px;
+}
+
+.num-digit {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--text);
+  line-height: 1;
+}
+
+.num-label {
+  font-size: 8px;
+  font-family: 'Arial', sans-serif;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Card content */
+.card-body {
+  flex: 1;
+  padding: 14px 14px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.event-text {
+  font-size: 15.5px;
+  line-height: 1.42;
+  color: var(--text);
+}
+
+.hint-text {
+  font-size: 12px;
+  color: var(--gold);
+  font-family: 'Arial', sans-serif;
+  font-style: italic;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.3s, max-height 0.3s;
+}
+.hint-text.visible { opacity: 1; max-height: 40px; }
+
+.year-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: 'Arial', sans-serif;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.3s, max-height 0.3s;
+}
+.year-text.visible { opacity: 1; max-height: 30px; }
+
+/* Drag handle */
+.drag-handle {
+  display: flex;
+  align-items: center;
+  padding: 0 12px 0 6px;
+  color: var(--border-light);
+  font-size: 16px;
+  pointer-events: none;
+  letter-spacing: -2px;
+}
+
+/* ── Buttons ── */
+.btn-row {
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  gap: 10px;
+}
+
+.submit-btn {
+  flex: 1;
+  background: var(--gold);
+  color: #12121e;
+  border: none;
+  padding: 15px 24px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: bold;
+  font-family: 'Arial', sans-serif;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, opacity 0.2s;
+}
+.submit-btn:hover:not(:disabled) { background: var(--gold-light); transform: translateY(-1px); }
+.submit-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+.submit-btn.retry-mode { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border-light); }
+.submit-btn.retry-mode:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); background: var(--surface); transform: none; }
+
+/* ── Already played banner ── */
+.played-banner {
+  display: none;
+  width: 100%;
+  max-width: 580px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+.played-banner strong { color: var(--text); }
+
+/* ── Overlay / Modal ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 30px 26px;
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+  transform: translateY(12px);
+  transition: transform 0.25s;
+}
+.overlay.open .modal { transform: translateY(0); }
+
+.modal-emoji { font-size: 44px; margin-bottom: 10px; }
+.modal-title {
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--gold);
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+.modal-sub {
+  color: var(--text-muted);
+  font-family: 'Arial', sans-serif;
+  font-size: 13px;
+  margin-bottom: 22px;
+  line-height: 1.6;
+}
+
+.answer-list { text-align: left; margin-bottom: 22px; }
+
+.answer-item {
+  display: flex;
+  gap: 11px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13.5px;
+  font-family: 'Arial', sans-serif;
+}
+.answer-item:last-child { border-bottom: none; }
+.ai-rank { color: var(--gold); font-weight: bold; min-width: 18px; }
+.ai-text { flex: 1; color: var(--text); line-height: 1.4; }
+.ai-year { color: var(--text-muted); font-style: italic; white-space: nowrap; }
+
+.modal-close {
+  background: var(--gold);
+  color: #12121e;
+  border: none;
+  padding: 12px 36px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: bold;
+  font-family: 'Arial', sans-serif;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.2s;
+}
+.modal-close:hover { background: var(--gold-light); }
+
+/* Hint picker modal */
+.hint-modal {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 440px;
+  width: 100%;
+  transform: translateY(12px);
+  transition: transform 0.25s;
+}
+.overlay.open .hint-modal { transform: translateY(0); }
+
+.hint-modal-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--gold);
+  margin-bottom: 14px;
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+}
+
+.hint-choice {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 7px;
+  cursor: pointer;
+  transition: all 0.18s;
+  font-family: 'Arial', sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+}
+.hint-choice:hover { border-color: var(--gold); background: var(--card-hover); }
+
+.hint-cancel {
+  width: 100%;
+  margin-top: 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Arial', sans-serif;
+  font-size: 13px;
+  transition: border-color 0.18s;
+}
+.hint-cancel:hover { border-color: var(--border-light); }
+
+/* ── Animations ── */
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  18%     { transform: translateX(-7px); }
+  36%     { transform: translateX(7px); }
+  54%     { transform: translateX(-5px); }
+  72%     { transform: translateX(5px); }
+}
+.shake { animation: shake 0.4s ease; }
+
+@keyframes bounceIn {
+  0%   { transform: scale(0.92); opacity: 0; }
+  60%  { transform: scale(1.03); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.bounce-in { animation: bounceIn 0.35s ease forwards; }
+
+/* Divider */
+.divider {
+  width: 36px; height: 2px;
+  background: var(--gold);
+  margin: 10px auto;
+  border-radius: 2px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="game-title">Chronicle</div>
+  <div class="day-label" id="dayLabel">Daily</div>
+  <div class="meta-bar">
+    <div class="tries-left" id="triesDisplay"><span class="tries-num">2</span> tries left</div>
+    <button class="hint-btn" id="hintBtn" onclick="openHintModal()">💡 Hint (1 left)</button>
+  </div>
+</div>
+
+<div class="played-banner" id="playedBanner">
+  <strong id="playedResult"></strong>
+  <div class="divider"></div>
+  Come back tomorrow for a new puzzle.
+</div>
+
+<p class="instruction">Arrange these five events from <strong>earliest</strong> to <strong>latest</strong>.</p>
+
+<div class="timeline" id="timeline"></div>
+
+<div class="btn-row">
+  <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">Submit</button>
+</div>
+
+<!-- Result modal -->
+<div class="overlay" id="resultOverlay">
+  <div class="modal">
+    <div class="modal-emoji" id="resEmoji"></div>
+    <div class="modal-title" id="resTitle"></div>
+    <div class="modal-sub" id="resSub"></div>
+    <div class="answer-list" id="resList"></div>
+    <button class="modal-close" onclick="closeResultModal()">Close</button>
+  </div>
+</div>
+
+<!-- Hint modal -->
+<div class="overlay" id="hintOverlay">
+  <div class="hint-modal">
+    <div class="hint-modal-title">💡 Pick an event to get a hint</div>
+    <div id="hintChoices"></div>
+    <button class="hint-cancel" onclick="closeHintModal()">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// PUZZLE DATA
+// ═══════════════════════════════════════════════════════════════
+
+const PUZZLES = {
+
+  // ── EASY: large era gaps, need real (but common) knowledge ──
+  easy: [
+    { events: [
+      { text: "The Great Pyramid of Giza is completed", year: -2560, display: "c. 2560 BC" },
+      { text: "Julius Caesar is assassinated", year: -44, display: "44 BC" },
+      { text: "The Black Death reaches Europe", year: 1347, display: "1347" },
+      { text: "Columbus reaches the Americas", year: 1492, display: "1492" },
+      { text: "The first moon landing", year: 1969, display: "1969" },
+    ]},
+    { events: [
+      { text: "Rome is traditionally founded", year: -753, display: "753 BC" },
+      { text: "Muhammad makes the Hijra to Medina, marking the birth of Islam", year: 622, display: "622 AD" },
+      { text: "The Magna Carta is signed", year: 1215, display: "1215" },
+      { text: "Shakespeare is born", year: 1564, display: "1564" },
+      { text: "The Declaration of Independence is signed", year: 1776, display: "1776" },
+    ]},
+    { events: [
+      { text: "Alexander the Great begins his conquest of Persia", year: -334, display: "334 BC" },
+      { text: "The Western Roman Empire falls", year: 476, display: "476 AD" },
+      { text: "Gutenberg prints the Bible", year: 1455, display: "1455" },
+      { text: "The French Revolution begins", year: 1789, display: "1789" },
+      { text: "World War II ends", year: 1945, display: "1945" },
+    ]},
+    { events: [
+      { text: "The Parthenon is completed in Athens", year: -432, display: "432 BC" },
+      { text: "Charlemagne is crowned Holy Roman Emperor", year: 800, display: "800 AD" },
+      { text: "The First Crusade begins", year: 1095, display: "1095" },
+      { text: "Martin Luther posts his 95 Theses", year: 1517, display: "1517" },
+      { text: "The American Civil War ends", year: 1865, display: "1865" },
+    ]},
+    { events: [
+      { text: "Qin Shi Huang unifies China under the first empire", year: -221, display: "221 BC" },
+      { text: "Muhammad is born", year: 570, display: "570 AD" },
+      { text: "The Mongol Empire reaches its greatest extent", year: 1279, display: "c. 1279" },
+      { text: "The Aztec Empire is founded", year: 1428, display: "c. 1428" },
+      { text: "The Berlin Wall falls", year: 1989, display: "1989" },
+    ]},
+    { events: [
+      { text: "Hammurabi's Code is written — one of history's first law codes", year: -1754, display: "c. 1754 BC" },
+      { text: "The life of the Buddha begins", year: -563, display: "c. 563 BC" },
+      { text: "The Ottoman Empire captures Constantinople", year: 1453, display: "1453" },
+      { text: "George Washington becomes the first U.S. president", year: 1789, display: "1789" },
+      { text: "The Wright Brothers make the first successful airplane flight", year: 1903, display: "1903" },
+    ]},
+    { events: [
+      { text: "Homer composes the Iliad (estimated)", year: -800, display: "c. 800 BC" },
+      { text: "Genghis Khan unifies the Mongol tribes", year: 1206, display: "1206" },
+      { text: "Magellan's expedition completes the first circumnavigation of Earth", year: 1522, display: "1522" },
+      { text: "Darwin publishes On the Origin of Species", year: 1859, display: "1859" },
+      { text: "The Soviet Union dissolves", year: 1991, display: "1991" },
+    ]},
+    { events: [
+      { text: "Cleopatra becomes Queen of Egypt", year: -51, display: "51 BC" },
+      { text: "The Viking Age begins", year: 793, display: "793 AD" },
+      { text: "The printing press is invented by Gutenberg", year: 1440, display: "c. 1440" },
+      { text: "The American Revolution begins", year: 1775, display: "1775" },
+      { text: "Yuri Gagarin becomes the first human in space", year: 1961, display: "1961" },
+    ]},
+  ],
+
+  // ── MEDIUM: same broad era, closer gaps, need specific knowledge ──
+  medium: [
+    { events: [
+      { text: "The Declaration of Independence is signed", year: 1776, display: "1776" },
+      { text: "The French Revolution begins", year: 1789, display: "1789" },
+      { text: "Haiti gains independence, becoming the first Black republic", year: 1804, display: "1804" },
+      { text: "The War of 1812 begins", year: 1812, display: "1812" },
+      { text: "The Monroe Doctrine is announced", year: 1823, display: "1823" },
+    ]},
+    { events: [
+      { text: "The American Civil War begins", year: 1861, display: "1861" },
+      { text: "The Emancipation Proclamation is issued", year: 1863, display: "1863" },
+      { text: "Lincoln is assassinated", year: 1865, display: "1865" },
+      { text: "The Transcontinental Railroad is completed", year: 1869, display: "1869" },
+      { text: "The Statue of Liberty is dedicated", year: 1886, display: "1886" },
+    ]},
+    { events: [
+      { text: "Karl Marx publishes The Communist Manifesto", year: 1848, display: "1848" },
+      { text: "Darwin publishes On the Origin of Species", year: 1859, display: "1859" },
+      { text: "The American Civil War begins", year: 1861, display: "1861" },
+      { text: "Alexander Graham Bell invents the telephone", year: 1876, display: "1876" },
+      { text: "The Eiffel Tower is completed", year: 1889, display: "1889" },
+    ]},
+    { events: [
+      { text: "World War I begins", year: 1914.07, display: "July 1914" },
+      { text: "The United States enters World War I", year: 1917.30, display: "April 1917" },
+      { text: "The Russian (Bolshevik) Revolution", year: 1917.87, display: "November 1917" },
+      { text: "The armistice ends World War I", year: 1918.87, display: "November 1918" },
+      { text: "Women gain the right to vote in the United States", year: 1920.65, display: "August 1920" },
+    ]},
+    { events: [
+      { text: "The Great Depression begins with the stock market crash", year: 1929.80, display: "October 1929" },
+      { text: "Hitler is appointed Chancellor of Germany", year: 1933.07, display: "January 1933" },
+      { text: "The Spanish Civil War begins", year: 1936.58, display: "July 1936" },
+      { text: "World War II begins: Germany invades Poland", year: 1939.67, display: "September 1939" },
+      { text: "Japan attacks Pearl Harbor", year: 1941.93, display: "December 1941" },
+    ]},
+    { events: [
+      { text: "Israel is declared an independent state", year: 1948.37, display: "May 1948" },
+      { text: "The Korean War begins", year: 1950.49, display: "June 1950" },
+      { text: "The Supreme Court rules in Brown v. Board of Education", year: 1954.38, display: "May 1954" },
+      { text: "Rosa Parks refuses to give up her seat", year: 1955.92, display: "December 1955" },
+      { text: "The Soviet Union launches Sputnik", year: 1957.75, display: "October 1957" },
+    ]},
+    { events: [
+      { text: "The Cuban Missile Crisis", year: 1962.80, display: "October 1962" },
+      { text: "JFK is assassinated", year: 1963.88, display: "November 1963" },
+      { text: "The Civil Rights Act is signed into law", year: 1964.53, display: "July 1964" },
+      { text: "MLK is assassinated", year: 1968.27, display: "April 1968" },
+      { text: "Neil Armstrong walks on the Moon", year: 1969.55, display: "July 1969" },
+    ]},
+    { events: [
+      { text: "Nixon visits China, opening diplomatic relations", year: 1972.13, display: "February 1972" },
+      { text: "The Watergate break-in", year: 1972.46, display: "June 1972" },
+      { text: "Roe v. Wade is decided", year: 1973.06, display: "January 1973" },
+      { text: "Nixon resigns the presidency", year: 1974.62, display: "August 1974" },
+      { text: "Saigon falls, ending the Vietnam War", year: 1975.32, display: "April 1975" },
+    ]},
+  ],
+
+  // ── HARD: events within a decade or two, same historical episode ──
+  hard: [
+    { events: [
+      { text: "World War I armistice is signed", year: 1918.87, display: "November 1918" },
+      { text: "The Treaty of Versailles is signed", year: 1919.49, display: "June 1919" },
+      { text: "The Great Depression begins", year: 1929.80, display: "October 1929" },
+      { text: "Hitler is appointed Chancellor of Germany", year: 1933.07, display: "January 1933" },
+      { text: "Germany invades Poland; World War II begins", year: 1939.67, display: "September 1939" },
+    ]},
+    { events: [
+      { text: "D-Day: the Allied invasion of Normandy", year: 1944.46, display: "June 1944" },
+      { text: "The Yalta Conference", year: 1945.12, display: "February 1945" },
+      { text: "V-E Day: Germany surrenders", year: 1945.38, display: "May 1945" },
+      { text: "The UN Charter is signed in San Francisco", year: 1945.49, display: "June 1945" },
+      { text: "The atomic bomb is dropped on Hiroshima", year: 1945.60, display: "August 1945" },
+    ]},
+    { events: [
+      { text: "The Berlin Wall is constructed", year: 1961.62, display: "August 1961" },
+      { text: "The Cuban Missile Crisis", year: 1962.80, display: "October 1962" },
+      { text: "JFK is assassinated", year: 1963.88, display: "November 1963" },
+      { text: "The Civil Rights Act is signed", year: 1964.53, display: "July 1964" },
+      { text: "The Voting Rights Act is signed", year: 1965.62, display: "August 1965" },
+    ]},
+    { events: [
+      { text: "The Tet Offensive begins, shocking the American public", year: 1968.08, display: "January 1968" },
+      { text: "MLK is assassinated in Memphis", year: 1968.27, display: "April 1968" },
+      { text: "RFK is assassinated in Los Angeles", year: 1968.46, display: "June 1968" },
+      { text: "Riots erupt at the Democratic National Convention", year: 1968.65, display: "August 1968" },
+      { text: "Nixon wins the presidential election", year: 1968.85, display: "November 1968" },
+    ]},
+    { events: [
+      { text: "Nixon visits China, opening diplomatic relations", year: 1972.13, display: "February 1972" },
+      { text: "The Watergate break-in", year: 1972.46, display: "June 1972" },
+      { text: "Roe v. Wade is decided", year: 1973.06, display: "January 1973" },
+      { text: "VP Spiro Agnew resigns in scandal", year: 1973.79, display: "October 1973" },
+      { text: "Nixon resigns the presidency", year: 1974.62, display: "August 1974" },
+    ]},
+    { events: [
+      { text: "Tiananmen Square protests are violently suppressed", year: 1989.43, display: "June 1989" },
+      { text: "The Berlin Wall falls", year: 1989.86, display: "November 1989" },
+      { text: "German reunification", year: 1990.79, display: "October 1990" },
+      { text: "The Gulf War begins", year: 1991.04, display: "January 1991" },
+      { text: "The Soviet Union dissolves", year: 1991.99, display: "December 1991" },
+    ]},
+    { events: [
+      { text: "The 9/11 attacks on the United States", year: 2001.70, display: "September 2001" },
+      { text: "The U.S. invades Afghanistan", year: 2001.79, display: "October 2001" },
+      { text: "The Department of Homeland Security is created", year: 2002.88, display: "November 2002" },
+      { text: "The U.S. invades Iraq", year: 2003.21, display: "March 2003" },
+      { text: "The Abu Ghraib prison scandal is exposed", year: 2004.32, display: "April 2004" },
+    ]},
+    { events: [
+      { text: "Hurricane Katrina devastates New Orleans", year: 2005.65, display: "August 2005" },
+      { text: "The global financial crisis peaks with the collapse of Lehman Brothers", year: 2008.71, display: "September 2008" },
+      { text: "Barack Obama is elected president", year: 2008.85, display: "November 2008" },
+      { text: "The Arab Spring begins in Tunisia", year: 2010.97, display: "December 2010" },
+      { text: "Osama bin Laden is killed in Pakistan", year: 2011.33, display: "May 2011" },
+    ]},
+  ],
+
+  // ── EXPERT: tight chronology, nuanced knowledge required ──
+  expert: [
+    { events: [
+      { text: "Facebook is founded", year: 2004.12, display: "February 2004" },
+      { text: "YouTube launches publicly", year: 2005.12, display: "February 2005" },
+      { text: "Twitter launches", year: 2006.58, display: "July 2006" },
+      { text: "The first iPhone is released", year: 2007.50, display: "June 2007" },
+      { text: "Instagram launches", year: 2010.79, display: "October 2010" },
+    ]},
+    { events: [
+      { text: "The Challenger space shuttle explodes after launch", year: 1986.07, display: "January 1986" },
+      { text: "The Chernobyl nuclear disaster", year: 1986.32, display: "April 1986" },
+      { text: "The Iran-Contra affair is revealed to the public", year: 1986.88, display: "November 1986" },
+      { text: "Black Monday: the global stock market crashes", year: 1987.80, display: "October 1987" },
+      { text: "The Berlin Wall falls", year: 1989.86, display: "November 1989" },
+    ]},
+    { events: [
+      { text: "Rosa Parks refuses to give up her seat on a Montgomery bus", year: 1955.92, display: "December 1955" },
+      { text: "The Montgomery Bus Boycott ends in victory", year: 1956.93, display: "December 1956" },
+      { text: "The Little Rock school integration crisis", year: 1957.72, display: "September 1957" },
+      { text: "The Greensboro lunch counter sit-ins begin", year: 1960.11, display: "February 1960" },
+      { text: "The Freedom Rides begin across the South", year: 1961.38, display: "May 1961" },
+    ]},
+    { events: [
+      { text: "Harry Potter and the Philosopher's Stone is published in the UK", year: 1997.50, display: "June 1997" },
+      { text: "Google is founded", year: 1998.72, display: "September 1998" },
+      { text: "Napster launches, disrupting the music industry", year: 1999.50, display: "June 1999" },
+      { text: "Wikipedia launches", year: 2001.08, display: "January 2001" },
+      { text: "MySpace launches", year: 2003.65, display: "August 2003" },
+    ]},
+    { events: [
+      { text: "The House of Representatives impeaches President Clinton", year: 1998.96, display: "December 1998" },
+      { text: "The Senate acquits President Clinton", year: 1999.12, display: "February 1999" },
+      { text: "The Columbine High School shooting", year: 1999.30, display: "April 1999" },
+      { text: "Y2K: the year 2000 arrives without catastrophe", year: 2000.00, display: "January 2000" },
+      { text: "The Supreme Court decides Bush v. Gore, ending the election recount", year: 2000.95, display: "December 2000" },
+    ]},
+    { events: [
+      { text: "Roe v. Wade is decided by the Supreme Court", year: 1973.06, display: "January 1973" },
+      { text: "Nixon resigns the presidency", year: 1974.62, display: "August 1974" },
+      { text: "Saigon falls, ending the Vietnam War", year: 1975.32, display: "April 1975" },
+      { text: "Apple Computer is co-founded by Jobs and Wozniak", year: 1976.30, display: "April 1976" },
+      { text: "Star Wars is released in theaters", year: 1977.38, display: "May 1977" },
+    ]},
+    { events: [
+      { text: "Nelson Mandela is released from prison after 27 years", year: 1990.11, display: "February 1990" },
+      { text: "German reunification", year: 1990.79, display: "October 1990" },
+      { text: "Croatia and Slovenia declare independence from Yugoslavia", year: 1991.50, display: "June 1991" },
+      { text: "The Soviet Union dissolves", year: 1991.99, display: "December 1991" },
+      { text: "The Maastricht Treaty is signed, creating the European Union", year: 1992.11, display: "February 1992" },
+    ]},
+    { events: [
+      { text: "Hurricane Katrina devastates New Orleans", year: 2005.65, display: "August 2005" },
+      { text: "Steve Jobs unveils the first iPhone at Macworld", year: 2007.04, display: "January 2007" },
+      { text: "Bear Stearns collapses, signaling the coming financial crisis", year: 2008.22, display: "March 2008" },
+      { text: "Lehman Brothers files for bankruptcy", year: 2008.71, display: "September 2008" },
+      { text: "Barack Obama is inaugurated as the 44th president", year: 2009.04, display: "January 2009" },
+    ]},
+  ],
+};
+
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+
+const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DIFF_BY_DAY = { 0:'expert', 1:'easy', 2:'easy', 3:'medium', 4:'medium', 5:'hard', 6:'hard' };
+const DIFF_LABEL  = { easy:'Easy', medium:'Medium', hard:'Hard', expert:'Expert' };
+const MAX_STRIKES = 2;
+const MAX_HINTS   = 1;
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+
+let puzzle       = null;
+let order        = [];      // order[slotIndex] = eventIndex
+let strikes      = 0;
+let hintsUsed    = 0;
+let hintedEvents = new Set();  // event indices that have hints shown
+let gameState    = 'playing';  // 'playing' | 'reviewing' | 'won' | 'lost'
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+
+function init() {
+  const today   = new Date();
+  const dow     = today.getDay();
+  const diff    = DIFF_BY_DAY[dow];
+  const pool    = PUZZLES[diff];
+  const doy     = Math.floor((today - new Date(today.getFullYear(),0,0)) / 86400000);
+  puzzle        = pool[doy % pool.length];
+
+  document.getElementById('dayLabel').textContent = 'Daily';
+
+  const saved = localStorage.getItem(storageKey());
+
+  if (saved) {
+    const s = JSON.parse(saved);
+    order        = s.order;
+    strikes      = s.strikes;
+    hintsUsed    = s.hintsUsed;
+    hintedEvents = new Set(s.hintedEvents || []);
+    gameState    = s.gameState === 'reviewing' ? 'playing' : s.gameState;
+  } else {
+    order = shuffle([0,1,2,3,4]);
+    // Make sure it isn't already correct
+    while (JSON.stringify(order) === JSON.stringify(correctOrder())) {
+      order = shuffle([0,1,2,3,4]);
+    }
+  }
+
+  render();
+  updateStrikes();
+  updateHintBtn();
+
+  if (gameState === 'won' || gameState === 'lost') {
+    showPlayedBanner();
+    setSubmitDisabled(true);
+    document.getElementById('hintBtn').disabled = true;
+    applyColors(true);
+  }
+}
+
+function storageKey() {
+  const d = new Date();
+  return `ht_${d.getFullYear()}_${d.getMonth()}_${d.getDate()}`;
+}
+
+function save() {
+  localStorage.setItem(storageKey(), JSON.stringify({
+    order, strikes, hintsUsed,
+    hintedEvents: [...hintedEvents],
+    gameState
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+function correctOrder() {
+  return [0,1,2,3,4].sort((a,b) => puzzle.events[a].year - puzzle.events[b].year);
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getOrdinal(n) {
+  if ([11,12,13].includes(n % 100)) return 'th';
+  return ['th','st','nd','rd'][(n % 10) < 4 ? n % 10 : 0];
+}
+
+function hintText(year) {
+  const y = Math.floor(year);
+  if (y >= 2000) {
+    const half = Math.floor(y / 5) * 5;
+    return `This happened between ${half} and ${half + 4}`;
+  }
+  if (y >= 1900) {
+    const dec = Math.floor(y / 10) * 10;
+    return `This happened in the ${dec}s`;
+  }
+  if (y > 0) {
+    const c = Math.ceil(y / 100);
+    return `This happened in the ${c}${getOrdinal(c)} century`;
+  }
+  const c = Math.ceil(-y / 100);
+  return `This happened in the ${c}${getOrdinal(c)} century BC`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════
+
+function render() {
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+
+  order.forEach((evIdx, slotIdx) => {
+    const ev = puzzle.events[evIdx];
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.slot = slotIdx;
+    card.draggable = true;
+
+    // stripe
+    const stripe = document.createElement('div');
+    stripe.className = 'card-stripe';
+
+    // number
+    const num = document.createElement('div');
+    num.className = 'card-num';
+    num.innerHTML = `<span class="num-digit">${slotIdx + 1}</span>`
+      + (slotIdx === 0 ? `<span class="num-label">earliest</span>` : '')
+      + (slotIdx === 4 ? `<span class="num-label">latest</span>` : '');
+
+    // body
+    const body = document.createElement('div');
+    body.className = 'card-body';
+
+    const txt = document.createElement('div');
+    txt.className = 'event-text';
+    txt.textContent = ev.text;
+    body.appendChild(txt);
+
+    const hint = document.createElement('div');
+    hint.className = 'hint-text' + (hintedEvents.has(evIdx) ? ' visible' : '');
+    hint.textContent = '💡 ' + hintText(ev.year);
+    body.appendChild(hint);
+
+    const yr = document.createElement('div');
+    yr.className = 'year-text';
+    yr.textContent = ev.display;
+    body.appendChild(yr);
+
+    // drag handle
+    const handle = document.createElement('div');
+    handle.className = 'drag-handle';
+    handle.innerHTML = '⠿⠿';
+
+    card.appendChild(stripe);
+    card.appendChild(num);
+    card.appendChild(body);
+    card.appendChild(handle);
+
+    // Desktop HTML5 drag
+    card.addEventListener('dragstart', onDragStart);
+    card.addEventListener('dragend', onDragEnd);
+    card.addEventListener('dragover', onDragOver);
+    card.addEventListener('dragleave', onDragLeave);
+    card.addEventListener('drop', onDrop);
+
+    // Mobile pointer drag
+    card.addEventListener('pointerdown', onPointerDown);
+
+    tl.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DESKTOP DRAG & DROP
+// ═══════════════════════════════════════════════════════════════
+
+let dragFrom = null;
+
+function onDragStart(e) {
+  if (gameState !== 'playing') { e.preventDefault(); return; }
+  dragFrom = parseInt(e.currentTarget.dataset.slot);
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  const target = e.currentTarget;
+  if (parseInt(target.dataset.slot) !== dragFrom) {
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+    target.classList.add('drag-over');
+  }
+}
+
+function onDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function onDrop(e) {
+  e.preventDefault();
+  const to = parseInt(e.currentTarget.dataset.slot);
+  e.currentTarget.classList.remove('drag-over');
+  if (dragFrom !== null && dragFrom !== to) doSwap(dragFrom, to);
+  dragFrom = null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MOBILE POINTER DRAG
+// ═══════════════════════════════════════════════════════════════
+
+let ptrFrom = null, ptrClone = null, ptrStartY = 0, ptrActive = false;
+
+function onPointerDown(e) {
+  if (gameState !== 'playing') return;
+  if (e.pointerType === 'mouse') return;
+
+  const card = e.currentTarget;
+  ptrFrom    = parseInt(card.dataset.slot);
+  ptrStartY  = e.clientY;
+  ptrActive  = false;
+
+  const rect = card.getBoundingClientRect();
+
+  function move(me) {
+    if (!ptrActive && Math.abs(me.clientY - ptrStartY) > 6) {
+      ptrActive = true;
+      ptrClone = card.cloneNode(true);
+      Object.assign(ptrClone.style, {
+        position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
+        width: rect.width + 'px', opacity: '0.88', pointerEvents: 'none',
+        zIndex: '9999', transform: 'scale(1.03)',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.6)', transition: 'none',
+        borderRadius: '10px'
+      });
+      document.body.appendChild(ptrClone);
+      card.style.opacity = '0.3';
+    }
+    if (!ptrActive) return;
+
+    ptrClone.style.top = (rect.top + me.clientY - ptrStartY) + 'px';
+
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+    ptrClone.style.pointerEvents = 'none';
+    const el = document.elementFromPoint(me.clientX, me.clientY);
+    ptrClone.style.pointerEvents = '';
+    const target = el?.closest?.('.card');
+    if (target && parseInt(target.dataset.slot) !== ptrFrom) {
+      target.classList.add('drag-over');
+    }
+  }
+
+  function up(ue) {
+    document.removeEventListener('pointermove', move);
+    document.removeEventListener('pointerup', up);
+    if (ptrClone) { ptrClone.remove(); ptrClone = null; }
+    card.style.opacity = '';
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+    if (!ptrActive) return;
+
+    const el = document.elementFromPoint(ue.clientX, ue.clientY);
+    const target = el?.closest?.('.card');
+    if (target) {
+      const to = parseInt(target.dataset.slot);
+      if (to !== ptrFrom) doSwap(ptrFrom, to);
+    }
+    ptrFrom = null; ptrActive = false;
+  }
+
+  document.addEventListener('pointermove', move);
+  document.addEventListener('pointerup', up);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SWAP & CLEAR
+// ═══════════════════════════════════════════════════════════════
+
+function doSwap(i, j) {
+  // If in review mode, dragging clears the colors and resumes play
+  if (gameState === 'reviewing') exitReview();
+
+  [order[i], order[j]] = [order[j], order[i]];
+  render();
+  save();
+}
+
+function exitReview() {
+  gameState = 'playing';
+  clearColors();
+  document.getElementById('submitBtn').textContent = 'Submit';
+  document.getElementById('submitBtn').className = 'submit-btn';
+  save();
+}
+
+function clearColors() {
+  document.querySelectorAll('.card').forEach(c => {
+    c.classList.remove('correct','close','wrong');
+    c.querySelector('.year-text')?.classList.remove('visible');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SUBMIT
+// ═══════════════════════════════════════════════════════════════
+
+function handleSubmit() {
+  if (gameState === 'reviewing') { exitReview(); return; }
+  if (gameState !== 'playing') return;
+
+  const correct = correctOrder();
+  const allCorrect = JSON.stringify(order) === JSON.stringify(correct);
+
+  if (allCorrect) {
+    gameState = 'won';
+    save();
+    applyColors(false);
+    setSubmitDisabled(true);
+    document.getElementById('hintBtn').disabled = true;
+    setTimeout(() => openResultModal(true), 550);
+    return;
+  }
+
+  // Wrong answer
+  strikes++;
+  updateStrikes();
+
+  if (strikes >= MAX_STRIKES) {
+    gameState = 'lost';
+    save();
+    applyColors(true);
+    setSubmitDisabled(true);
+    document.getElementById('hintBtn').disabled = true;
+    setTimeout(() => openResultModal(false), 550);
+  } else {
+    save();
+    gameState = 'reviewing';
+    applyColors(false);
+    document.getElementById('submitBtn').textContent = 'Rearrange & Try Again';
+    document.getElementById('submitBtn').className = 'submit-btn retry-mode';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COLORS
+// ═══════════════════════════════════════════════════════════════
+
+function applyColors(showYears) {
+  const correct = correctOrder();
+  document.querySelectorAll('.card').forEach((card, slotIdx) => {
+    const evIdx = order[slotIdx];
+    const correctSlot = correct.indexOf(evIdx);
+    const diff = Math.abs(slotIdx - correctSlot);
+    card.classList.remove('correct','close','wrong');
+    if (diff === 0) card.classList.add('correct');
+    else            { card.classList.add('wrong'); card.classList.add('shake'); setTimeout(() => card.classList.remove('shake'), 420); }
+    if (showYears) {
+      card.querySelector('.year-text')?.classList.add('visible');
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STRIKES UI
+// ═══════════════════════════════════════════════════════════════
+
+function updateStrikes() {
+  const rem = MAX_STRIKES - strikes;
+  const el = document.getElementById('triesDisplay');
+  el.innerHTML = `<span class="tries-num">${rem}</span> ${rem === 1 ? 'try' : 'tries'} left`;
+}
+
+function setSubmitDisabled(v) {
+  document.getElementById('submitBtn').disabled = v;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HINTS
+// ═══════════════════════════════════════════════════════════════
+
+function updateHintBtn() {
+  const rem = MAX_HINTS - hintsUsed;
+  const btn = document.getElementById('hintBtn');
+  btn.textContent = rem > 0 ? `💡 Hint (${rem} left)` : `💡 Hint (used)`;
+  btn.disabled = rem <= 0 || gameState === 'won' || gameState === 'lost';
+}
+
+function openHintModal() {
+  if (hintsUsed >= MAX_HINTS) return;
+  const choices = document.getElementById('hintChoices');
+  choices.innerHTML = '';
+  order.forEach((evIdx) => {
+    if (hintedEvents.has(evIdx)) return;
+    const ev = puzzle.events[evIdx];
+    const div = document.createElement('div');
+    div.className = 'hint-choice';
+    div.innerHTML = `<span>📜</span><span>${ev.text}</span>`;
+    div.onclick = () => { giveHint(evIdx); closeHintModal(); };
+    choices.appendChild(div);
+  });
+  if (!choices.children.length) {
+    choices.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-family:Arial;font-size:13px;padding:12px">No more hints available.</p>';
+  }
+  document.getElementById('hintOverlay').classList.add('open');
+}
+
+function giveHint(evIdx) {
+  hintedEvents.add(evIdx);
+  hintsUsed++;
+  updateHintBtn();
+  render();
+  save();
+}
+
+function closeHintModal() {
+  document.getElementById('hintOverlay').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RESULT MODAL
+// ═══════════════════════════════════════════════════════════════
+
+function openResultModal(won) {
+  const correct = correctOrder();
+  document.getElementById('resEmoji').textContent = won ? '🎉' : '📜';
+  document.getElementById('resTitle').textContent = won ? 'Well done!' : 'The correct order';
+
+  let sub = '';
+  if (won) {
+    if (strikes === 0)      sub = 'Perfect — no mistakes. Come back tomorrow!';
+    else if (strikes === 1) sub = 'Got it with one mistake. Come back tomorrow!';
+    else                    sub = `Got it with ${strikes} mistakes. Come back tomorrow!`;
+  } else {
+    sub = "You've used all your strikes. Here's the correct chronological order:";
+  }
+  document.getElementById('resSub').textContent = sub;
+
+  const list = document.getElementById('resList');
+  list.innerHTML = '';
+  correct.forEach((evIdx, rank) => {
+    const ev = puzzle.events[evIdx];
+    const item = document.createElement('div');
+    item.className = 'answer-item';
+    item.innerHTML = `<span class="ai-rank">${rank+1}.</span><span class="ai-text">${ev.text}</span><span class="ai-year">${ev.display}</span>`;
+    list.appendChild(item);
+  });
+
+  document.getElementById('resultOverlay').classList.add('open');
+}
+
+function closeResultModal() {
+  document.getElementById('resultOverlay').classList.remove('open');
+  if (gameState === 'won' || gameState === 'lost') {
+    showPlayedBanner();
+    applyColors(true);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PLAYED BANNER
+// ═══════════════════════════════════════════════════════════════
+
+function showPlayedBanner() {
+  const banner = document.getElementById('playedBanner');
+  const result = document.getElementById('playedResult');
+  result.textContent = gameState === 'won' ? '✅ You solved today\'s puzzle!' : '❌ Better luck tomorrow!';
+  banner.style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CLOSE OVERLAYS ON BACKDROP CLICK
+// ═══════════════════════════════════════════════════════════════
+
+document.getElementById('resultOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeResultModal();
+});
+document.getElementById('hintOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeHintModal();
+});
+
+// ═══════════════════════════════════════════════════════════════
+// GO
+// ═══════════════════════════════════════════════════════════════
+
+init();
+</script>
+</body>
+</html>
